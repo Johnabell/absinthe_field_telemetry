@@ -1,4 +1,7 @@
 defmodule AbsintheFieldTelemetry.Backend.Ets do
+  @moduledoc """
+    A AbsintheFieldTelemetry.Backend implementation using ets.
+  """
   @behaviour AbsintheFieldTelemetry.Backend
 
   @impl AbsintheFieldTelemetry.Backend

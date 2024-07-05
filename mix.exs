@@ -15,8 +15,7 @@ defmodule AbsintheFieldTelemetry.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
-      env: Application.get_all_env(:absinthe_field_telemetry)
+      extra_applications: [:logger]
     ]
   end
 

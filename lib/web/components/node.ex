@@ -1,4 +1,6 @@
 defmodule AbsintheFieldTelemetry.Web.Components.Node do
+  @moduledoc false
+
   use Phoenix.Component
 
   attr :field, :map
