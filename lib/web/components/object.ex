@@ -1,4 +1,6 @@
 defmodule AbsintheFieldTelemetry.Web.Components.Object do
+  @moduledoc false
+
   alias AbsintheFieldTelemetry.Types.Object
   alias AbsintheFieldTelemetry.Types.Field
   alias AbsintheFieldTelemetry.Types.Location

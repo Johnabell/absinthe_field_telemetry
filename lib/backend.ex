@@ -1,4 +1,10 @@
 defmodule AbsintheFieldTelemetry.Backend do
+  @moduledoc """
+    The backend of AbsintheFieldTelemetry.
+
+    Contains details of the callbacks required for a backend.
+  """
+
   @type t :: module
   @type path :: [String.t()]
   @type hits :: [{path, integer}]

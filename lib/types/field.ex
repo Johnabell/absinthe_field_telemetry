@@ -1,4 +1,6 @@
 defmodule AbsintheFieldTelemetry.Types.Field do
+  @moduledoc false
+
   use TypedStruct
 
   alias AbsintheFieldTelemetry.Types.Location

@@ -1,4 +1,6 @@
 defmodule AbsintheFieldTelemetry.Web.Components.Home do
+  @moduledoc false
+
   alias AbsintheFieldTelemetry.Web.Components
   use Phoenix.Component
 

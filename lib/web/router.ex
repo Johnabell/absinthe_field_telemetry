@@ -1,4 +1,14 @@
 defmodule AbsintheFieldTelemetry.Web.Router do
+  @moduledoc """
+    The absinthe_field_telemetry_dashboard macro can be used to add the
+    dashboard to your router, as follows:
+
+    ```elixir
+    import AbsintheFieldTelemetry.Web.Router
+    absinthe_field_telemetry_dashboard "/absinthe_field_telemetry_dashboard"
+    ```
+  """
+
   defmacro absinthe_field_telemetry_dashboard(path, opts \\ []) do
     quote bind_quoted: binding() do
       scope path, alias: false, as: false do

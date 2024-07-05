@@ -1,4 +1,6 @@
 defmodule AbsintheFieldTelemetry.Types.Node do
+  @moduledoc false
+
   use TypedStruct
 
   typedstruct do

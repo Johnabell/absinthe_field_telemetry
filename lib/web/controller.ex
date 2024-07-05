@@ -1,4 +1,6 @@
 defmodule AbsintheFieldTelemetry.Web.Controller do
+  @moduledoc false
+
   use Phoenix.Controller
   @error "Unrecognised schema"
 

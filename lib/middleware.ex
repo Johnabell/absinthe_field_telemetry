@@ -1,4 +1,15 @@
 defmodule AbsintheFieldTelemetry.Middleware do
+  @moduledoc """
+    Absinthe middleware for adding telemetry for usage of fields in a GraphQL schema.
+
+    Add `AbsintheFieldTelemetry.Middleware` to all the fields on the schema. The
+    easiest way to achieve this is using the [`middleware/3` callback](https://hexdocs.pm/absinthe/Absinthe.Middleware.html#module-the-middleware-3-callback):
+
+  ```elixir
+  def middleware(middleware, _field, _object), do: [AbsintheFieldTelemetry.Middleware | middleware]
+  ```
+  """
+
   alias AbsintheFieldTelemetry.Backend
 
   @behaviour Absinthe.Middleware
@@ -28,6 +39,4 @@ defmodule AbsintheFieldTelemetry.Middleware do
   end
 
   def duplicate?(path), do: Enum.any?(path, fn val -> is_number(val) && val > 0 end)
-
-  def wrap(middleware), do: [__MODULE__ | middleware]
 end
