@@ -156,7 +156,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
             |> String.split(":", parts: 2)
             |> Enum.map(&String.to_atom/1)
 
-          {{type, field}, count}
+          {{type, field}, String.to_integer(count)}
         end)
 
       _ ->
@@ -170,7 +170,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
         result
         |> Enum.chunk_every(2)
         |> Enum.map(fn [key, count] ->
-          {String.split(key, ":"), count}
+          {String.split(key, ":"), String.to_integer(count)}
         end)
 
       _ ->

@@ -41,12 +41,8 @@ defmodule AbsintheFieldTelemetry.Backend.Ets do
 
   @impl AbsintheFieldTelemetry.Backend
   def reset(schema) do
-    __MODULE__.TypeHits
-    |> :ets.match_delete({{schema, :_, :_}, :_})
-
-    __MODULE__
-    |> :ets.match_delete({{schema, :_}, :_})
-
+    :ets.match_delete(__MODULE__.TypeHits, {{schema, :_, :_}, :_})
+    :ets.match_delete(__MODULE__, {{schema, :_}, :_})
     :ok
   end
 end
