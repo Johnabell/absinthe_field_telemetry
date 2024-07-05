@@ -2,6 +2,9 @@ defmodule AbsintheFieldTelemetry.MixProject do
   use Mix.Project
 
   @version "0.1.0"
+  @description """
+  A library for analysing absinthe GraphQL runtime usage.
+  """
 
   def project do
     [
@@ -9,7 +12,10 @@ defmodule AbsintheFieldTelemetry.MixProject do
       version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      description: @description,
+      package: package(),
+      source_url: "https://github.com/Johnabell/absinthe_field_telemetry"
     ]
   end
 
@@ -31,6 +37,13 @@ defmodule AbsintheFieldTelemetry.MixProject do
       {:redix, "~> 1.1"},
       {:absinthe, "~> 1.5"},
       {:typed_struct, "~> 0.3.0"}
+    ]
+  end
+
+  defp package() do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/Johnabell/absinthe_field_telemetry"}
     ]
   end
 end
