@@ -120,21 +120,18 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   @impl GenServer
   def handle_cast({:incr_paths, {schema, paths}}, state) do
-    Enum.each(paths, fn path ->
-      field = Enum.join(path, ":")
-      Redix.noreply_command(state.redix, ["HINCRBY", redis_path_key(state, schema), field, 1])
-    end)
+    commands = Enum.map(paths, &incr_path_command(&1, schema, state))
+
+    Redix.noreply_pipeline(state.redix, commands)
 
     {:noreply, state}
   end
 
   @impl GenServer
   def handle_cast({:incr_fields, {schema, fields}}, state) do
-    Enum.each(fields, fn {type, field} ->
-      field = "#{type}:#{field}"
+    commands = Enum.map(fields, &incr_field_command(&1, schema, state))
 
-      Redix.command(state.redix, ["HINCRBY", redis_field_key(state, schema), field, 1])
-    end)
+    Redix.noreply_pipeline(state.redix, commands)
 
     {:noreply, state}
   end
@@ -178,6 +175,12 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
         []
     end
   end
+
+  defp incr_field_command({type, field}, schema, state),
+    do: ["HINCRBY", redis_field_key(state, schema), "#{type}:#{field}", 1]
+
+  defp incr_path_command(path, schema, state),
+    do: ["HINCRBY", redis_path_key(state, schema), Enum.join(path, ":"), 1]
 
   defp redis_field_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:field"
   defp redis_path_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:path"
