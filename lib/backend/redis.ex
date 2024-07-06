@@ -62,18 +62,18 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   end
 
   @impl AbsintheFieldTelemetry.Backend
-  def record_field_hit(schema, path),
-    do: GenServer.cast(__MODULE__, {:incr_field, {schema, Enum.join(path, ":")}})
+  def record_path_hits(schema, paths),
+    do: GenServer.cast(__MODULE__, {:incr_paths, {schema, paths}})
 
   @impl AbsintheFieldTelemetry.Backend
-  def record_field_hit(schema, type, field),
-    do: GenServer.cast(__MODULE__, {:incr_type, {schema, "#{type}:#{field}"}})
+  def record_field_hits(schema, fields),
+    do: GenServer.cast(__MODULE__, {:incr_fields, {schema, fields}})
 
   @impl AbsintheFieldTelemetry.Backend
-  def get_all_hits(schema), do: GenServer.call(__MODULE__, {:field_hits, schema})
+  def get_all_path_hits(schema), do: GenServer.call(__MODULE__, {:path_hits, schema})
 
   @impl AbsintheFieldTelemetry.Backend
-  def get_all_type_hits(schema), do: GenServer.call(__MODULE__, {:type_hits, schema})
+  def get_all_field_hits(schema), do: GenServer.call(__MODULE__, {:field_hits, schema})
 
   @impl AbsintheFieldTelemetry.Backend
   def reset(schema), do: GenServer.cast(__MODULE__, {:delete, schema})
@@ -112,35 +112,42 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   @impl GenServer
   def handle_call(:stop, _from, state), do: {:stop, :normal, :ok, state}
 
+  def handle_call({:path_hits, schema}, _from, state),
+    do: {:reply, do_get_path_hits(state, schema), state}
+
   def handle_call({:field_hits, schema}, _from, state),
     do: {:reply, do_get_field_hits(state, schema), state}
 
-  def handle_call({:type_hits, schema}, _from, state),
-    do: {:reply, do_get_type_hits(state, schema), state}
-
   @impl GenServer
-  def handle_cast({:incr_field, {schema, field}}, state) do
-    Redix.noreply_command(state.redix, ["HINCRBY", redis_field_key(state, schema), field, 1])
+  def handle_cast({:incr_paths, {schema, paths}}, state) do
+    Enum.each(paths, fn path ->
+      field = Enum.join(path, ":")
+      Redix.noreply_command(state.redix, ["HINCRBY", redis_path_key(state, schema), field, 1])
+    end)
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_cast({:incr_type, {schema, field}}, state) do
-    Redix.command(state.redix, ["HINCRBY", redis_type_key(state, schema), field, 1])
+  def handle_cast({:incr_fields, {schema, fields}}, state) do
+    Enum.each(fields, fn {type, field} ->
+      field = "#{type}:#{field}"
+
+      Redix.command(state.redix, ["HINCRBY", redis_field_key(state, schema), field, 1])
+    end)
 
     {:noreply, state}
   end
 
   def handle_cast({:delete, schema}, state) do
-    Redix.noreply_command(state.redix, ["DEL", redis_type_key(state, schema)])
     Redix.noreply_command(state.redix, ["DEL", redis_field_key(state, schema)])
+    Redix.noreply_command(state.redix, ["DEL", redis_path_key(state, schema)])
 
     {:noreply, state}
   end
 
-  def do_get_type_hits(%__MODULE__{redix: redix} = state, schema) do
-    case Redix.command(redix, ["HGETALL", redis_type_key(state, schema)]) do
+  def do_get_field_hits(%__MODULE__{redix: redix} = state, schema) do
+    case Redix.command(redix, ["HGETALL", redis_field_key(state, schema)]) do
       {:ok, result} ->
         result
         |> Enum.chunk_every(2)
@@ -158,8 +165,8 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
     end
   end
 
-  def do_get_field_hits(%__MODULE__{redix: redix} = state, schema) do
-    case Redix.command(redix, ["HGETALL", redis_field_key(state, schema)]) do
+  def do_get_path_hits(%__MODULE__{redix: redix} = state, schema) do
+    case Redix.command(redix, ["HGETALL", redis_path_key(state, schema)]) do
       {:ok, result} ->
         result
         |> Enum.chunk_every(2)
@@ -173,5 +180,5 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   end
 
   defp redis_field_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:field"
-  defp redis_type_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:type"
+  defp redis_path_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:path"
 end

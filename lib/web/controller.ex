@@ -6,7 +6,7 @@ defmodule AbsintheFieldTelemetry.Web.Controller do
 
   def home(conn, params) do
     %{
-      types: AbsintheFieldTelemetry.get_type_hits(get_schema!(params)),
+      types: AbsintheFieldTelemetry.get_field_hits(get_schema!(params)),
       base_url: conn.request_path
     }
     |> AbsintheFieldTelemetry.Web.Components.Home.home()
@@ -17,7 +17,7 @@ defmodule AbsintheFieldTelemetry.Web.Controller do
   end
 
   def tree(conn, params) do
-    %{root: AbsintheFieldTelemetry.get_all(get_schema!(params))}
+    %{root: AbsintheFieldTelemetry.get_path_hits(get_schema!(params))}
     |> AbsintheFieldTelemetry.Web.Components.Home.tree()
     |> Phoenix.HTML.Safe.to_iodata()
     |> then(&html(conn, &1))

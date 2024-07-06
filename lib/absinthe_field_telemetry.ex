@@ -41,17 +41,17 @@ defmodule AbsintheFieldTelemetry do
 
   def setup(), do: Backend.setup()
 
-  def get_all(schema) do
+  def get_path_hits(schema) do
     schema
-    |> Backend.get_all_hits()
+    |> Backend.get_all_path_hits()
     |> Enum.sort_by(&elem(&1, 0))
     |> Enum.reduce(Types.Node.root(), &Types.Node.add_field(&2, &1))
   end
 
-  def get_type_hits(schema) do
+  def get_field_hits(schema) do
     hits =
       schema
-      |> Backend.get_all_type_hits()
+      |> Backend.get_all_field_hits()
       |> Enum.group_by(&elem(elem(&1, 0), 0), fn {{_, field}, count} -> {field, count} end)
 
     schema

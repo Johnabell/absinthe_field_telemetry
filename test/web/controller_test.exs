@@ -29,24 +29,24 @@ defmodule AbsintheFieldTelemetry.Web.ControllerTest do
     end
 
     test "schema no data", %{conn: conn} do
-      with_mock AbsintheFieldTelemetry.Backend, get_all_type_hits: fn Schema -> [] end do
+      with_mock AbsintheFieldTelemetry.Backend, get_all_field_hits: fn Schema -> [] end do
         assert _page =
                  conn
                  |> Controller.home(%{"schema" => @schema})
                  |> html_response(200)
 
-        assert_called(AbsintheFieldTelemetry.Backend.get_all_type_hits(Schema))
+        assert_called(AbsintheFieldTelemetry.Backend.get_all_field_hits(Schema))
       end
     end
 
     test "schema data", %{conn: conn} do
-      with_mock AbsintheFieldTelemetry.Backend, get_all_type_hits: fn Schema -> @type_hits end do
+      with_mock AbsintheFieldTelemetry.Backend, get_all_field_hits: fn Schema -> @type_hits end do
         assert _page =
                  conn
                  |> Controller.home(%{"schema" => @schema})
                  |> html_response(200)
 
-        assert_called(AbsintheFieldTelemetry.Backend.get_all_type_hits(Schema))
+        assert_called(AbsintheFieldTelemetry.Backend.get_all_field_hits(Schema))
       end
     end
   end
@@ -60,7 +60,7 @@ defmodule AbsintheFieldTelemetry.Web.ControllerTest do
     end
 
     test "schema no data", %{conn: conn} do
-      with_mock AbsintheFieldTelemetry.Backend, get_all_hits: fn Schema -> [] end do
+      with_mock AbsintheFieldTelemetry.Backend, get_all_path_hits: fn Schema -> [] end do
         assert page =
                  conn
                  |> Controller.tree(%{"schema" => @schema})
@@ -68,12 +68,12 @@ defmodule AbsintheFieldTelemetry.Web.ControllerTest do
 
         assert page =~ "root"
 
-        assert_called(AbsintheFieldTelemetry.Backend.get_all_hits(Schema))
+        assert_called(AbsintheFieldTelemetry.Backend.get_all_path_hits(Schema))
       end
     end
 
     test "schema data", %{conn: conn} do
-      with_mock AbsintheFieldTelemetry.Backend, get_all_hits: fn Schema -> @field_hits end do
+      with_mock AbsintheFieldTelemetry.Backend, get_all_path_hits: fn Schema -> @field_hits end do
         assert page =
                  conn
                  |> Controller.tree(%{"schema" => @schema})
@@ -85,7 +85,7 @@ defmodule AbsintheFieldTelemetry.Web.ControllerTest do
         assert page =~ "postcode"
         assert page =~ "name"
 
-        assert_called(AbsintheFieldTelemetry.Backend.get_all_hits(Schema))
+        assert_called(AbsintheFieldTelemetry.Backend.get_all_path_hits(Schema))
       end
     end
   end
