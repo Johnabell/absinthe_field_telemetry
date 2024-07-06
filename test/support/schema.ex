@@ -1,6 +1,6 @@
 defmodule AbsintheFieldTelemetry.Test.Support.Schema do
   @moduledoc """
-    A test absinth schema
+    A test absinthe schema
   """
   use Absinthe.Schema
 
