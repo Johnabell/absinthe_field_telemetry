@@ -33,6 +33,8 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   use GenServer
 
+  defguardp is_non_empty_string(value) when is_binary(value) and byte_size(value) > 0
+
   ## Public API
 
   @spec start :: :ignore | {:error, any} | {:ok, pid}
@@ -83,105 +85,94 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   @impl GenServer
   def init(args) do
     expiry_ms = Keyword.get(args, :expiry_ms)
+    key_prefix = Keyword.get(args, :key_prefix, "AbsintheFieldTelemetry:Redis:")
+    redix_config = Keyword.get(args, :redix_config, Keyword.get(args, :redis_config, []))
+    redis_url = Keyword.get(args, :redis_url, nil)
 
     if !expiry_ms do
       raise RuntimeError, "Missing required config: expiry_ms"
     end
 
-    key_prefix = Keyword.get(args, :key_prefix, "AbsintheFieldTelemetry:Redis:")
-
-    redix_config =
-      Keyword.get(
-        args,
-        :redix_config,
-        Keyword.get(args, :redis_config, [])
-      )
-
-    redis_url = Keyword.get(args, :redis_url, nil)
-
-    {:ok, redix} =
-      if is_binary(redis_url) && byte_size(redis_url) > 0 do
-        Redix.start_link(redis_url, redix_config)
-      else
-        Redix.start_link(redix_config)
-      end
+    {:ok, redix} = start_redix(redis_url, redix_config)
 
     {:ok, %__MODULE__{redix: redix, expiry_ms: expiry_ms, key_prefix: key_prefix}}
   end
+
+  defp start_redix(url, config) when is_non_empty_string(url), do: Redix.start_link(url, config)
+  defp start_redix(_, config), do: Redix.start_link(config)
 
   @impl GenServer
   def handle_call(:stop, _from, state), do: {:stop, :normal, :ok, state}
 
   def handle_call({:path_hits, schema}, _from, state),
-    do: {:reply, do_get_path_hits(state, schema), state}
+    do: {:reply, do_get_hits(state, schema, :path), state}
 
   def handle_call({:field_hits, schema}, _from, state),
-    do: {:reply, do_get_field_hits(state, schema), state}
+    do: {:reply, do_get_hits(state, schema, :field), state}
 
   @impl GenServer
   def handle_cast({:incr_paths, {schema, paths}}, state) do
-    commands = Enum.map(paths, &incr_path_command(&1, schema, state))
-
-    Redix.noreply_pipeline(state.redix, commands)
-
+    do_incr(state, schema, paths, :path)
     {:noreply, state}
   end
 
   @impl GenServer
   def handle_cast({:incr_fields, {schema, fields}}, state) do
-    commands = Enum.map(fields, &incr_field_command(&1, schema, state))
+    do_incr(state, schema, fields, :field)
+    {:noreply, state}
+  end
 
+  def handle_cast({:delete, schema}, state) do
+    commands = Enum.map([:field, :path], &delete_command(state, schema, &1))
     Redix.noreply_pipeline(state.redix, commands)
 
     {:noreply, state}
   end
 
-  def handle_cast({:delete, schema}, state) do
-    Redix.noreply_command(state.redix, ["DEL", redis_field_key(state, schema)])
-    Redix.noreply_command(state.redix, ["DEL", redis_path_key(state, schema)])
-
-    {:noreply, state}
+  defp do_incr(%__MODULE__{} = state, schema, values, type) do
+    commands = Enum.map(values, &incr_command(state, schema, &1, type))
+    Redix.noreply_pipeline(state.redix, [expire_command(state, schema, type) | commands])
   end
 
-  def do_get_field_hits(%__MODULE__{redix: redix} = state, schema) do
-    case Redix.command(redix, ["HGETALL", redis_field_key(state, schema)]) do
-      {:ok, result} ->
-        result
-        |> Enum.chunk_every(2)
-        |> Enum.map(fn [key, count] ->
-          [type, field] =
-            key
-            |> String.split(":", parts: 2)
-            |> Enum.map(&String.to_atom/1)
-
-          {{type, field}, String.to_integer(count)}
-        end)
-
-      _ ->
-        []
-    end
+  defp do_get_hits(%__MODULE__{redix: redix} = state, schema, type) do
+    redix
+    |> Redix.command(get_all_command(state, schema, type))
+    |> redis_result_to_hits(type)
   end
 
-  def do_get_path_hits(%__MODULE__{redix: redix} = state, schema) do
-    case Redix.command(redix, ["HGETALL", redis_path_key(state, schema)]) do
-      {:ok, result} ->
-        result
-        |> Enum.chunk_every(2)
-        |> Enum.map(fn [key, count] ->
-          {String.split(key, ":"), String.to_integer(count)}
-        end)
-
-      _ ->
-        []
-    end
+  defp redis_result_to_hits({:ok, result}, type) do
+    result
+    |> Enum.chunk_every(2)
+    |> Enum.map(fn [key, count] -> {hit_from_key(key, type), String.to_integer(count)} end)
   end
 
-  defp incr_field_command({type, field}, schema, state),
-    do: ["HINCRBY", redis_field_key(state, schema), "#{type}:#{field}", 1]
+  defp redis_result_to_hits(_, _), do: []
 
-  defp incr_path_command(path, schema, state),
-    do: ["HINCRBY", redis_path_key(state, schema), Enum.join(path, ":"), 1]
+  defp hit_from_key(key, :path), do: String.split(key, ":")
 
-  defp redis_field_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:field"
-  defp redis_path_key(%__MODULE__{key_prefix: prefix}, schema), do: "#{prefix}:#{schema}:path"
+  defp hit_from_key(key, :field) do
+    key
+    |> String.split(":", parts: 2)
+    |> Enum.map(&String.to_atom/1)
+    |> List.to_tuple()
+  end
+
+  defp incr_command(%__MODULE__{} = state, schema, value, type),
+    do: ["HINCRBY", redis_key(state, schema, type), field_key(value), 1]
+
+  defp expire_command(%__MODULE__{} = state, schema, type),
+    do: ["EXPIRE", redis_key(state, schema, type), get_expiry(state)]
+
+  defp delete_command(%__MODULE__{} = state, schema, type),
+    do: ["DEL", redis_key(state, schema, type)]
+
+  defp get_all_command(%__MODULE__{} = state, schema, type),
+    do: ["HGETALL", redis_key(state, schema, type)]
+
+  defp field_key(value) when is_tuple(value), do: value |> Tuple.to_list() |> field_key()
+  defp field_key(path), do: Enum.join(path, ":")
+
+  defp redis_key(%__MODULE__{key_prefix: prefix}, schema, type), do: "#{prefix}:#{schema}:#{type}"
+
+  defp get_expiry(%__MODULE__{expiry_ms: expiry_ms}), do: round(expiry_ms / 1000 + 1)
 end
