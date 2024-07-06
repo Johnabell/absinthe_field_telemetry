@@ -33,9 +33,6 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   use GenServer
 
-  @type bucket_key :: {bucket :: integer, id :: String.t()}
-  @type bucket_info ::
-          {key :: bucket_key, count :: integer, created :: integer, updated :: integer}
   ## Public API
 
   @spec start :: :ignore | {:error, any} | {:ok, pid}
@@ -55,11 +52,8 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   @config Application.compile_env(:absinthe_field_telemetry, [:redis, :config],
             expiry_ms: 60_000 * 60 * 4,
-            redis_url: "redis://localhost:6379/1",
-            pool_size: 4
+            redis_url: "redis://localhost:6379/1"
           )
-
-  # @config Application.compile_env(:absinthe_field_telemetry_redis, [:config], [])
 
   @impl AbsintheFieldTelemetry.Backend
   def setup() do
@@ -126,7 +120,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   @impl GenServer
   def handle_cast({:incr_field, {schema, field}}, state) do
-    Redix.command(state.redix, ["HINCRBY", redis_field_key(state, schema), field, 1])
+    Redix.noreply_command(state.redix, ["HINCRBY", redis_field_key(state, schema), field, 1])
 
     {:noreply, state}
   end
@@ -139,8 +133,8 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   end
 
   def handle_cast({:delete, schema}, state) do
-    Redix.command(state.redix, ["DEL", redis_type_key(state, schema)])
-    Redix.command(state.redix, ["DEL", redis_field_key(state, schema)])
+    Redix.noreply_command(state.redix, ["DEL", redis_type_key(state, schema)])
+    Redix.noreply_command(state.redix, ["DEL", redis_field_key(state, schema)])
 
     {:noreply, state}
   end
@@ -156,7 +150,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
             |> String.split(":", parts: 2)
             |> Enum.map(&String.to_atom/1)
 
-          {{type, field}, count}
+          {{type, field}, String.to_integer(count)}
         end)
 
       _ ->
@@ -170,7 +164,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
         result
         |> Enum.chunk_every(2)
         |> Enum.map(fn [key, count] ->
-          {String.split(key, ":"), count}
+          {String.split(key, ":"), String.to_integer(count)}
         end)
 
       _ ->

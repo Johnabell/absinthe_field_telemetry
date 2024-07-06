@@ -34,3 +34,17 @@ Add the dashboard to your router.
 import AbsintheFieldTelemetry.Web.Router
 absinthe_field_telemetry_dashboard "/absinthe_field_telemetry_dashboard"
 ```
+
+## Test
+
+To run the redis tests you need to have redis running. You can do this via docker compose by running:
+
+```bash
+docker compose up -d
+```
+
+Then you can run the tests
+
+```
+mix test
+```

@@ -11,6 +11,7 @@ defmodule AbsintheFieldTelemetry.MixProject do
       app: :absinthe_field_telemetry,
       version: @version,
       elixir: "~> 1.14",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       description: @description,
@@ -24,6 +25,9 @@ defmodule AbsintheFieldTelemetry.MixProject do
       extra_applications: [:logger]
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_env), do: ["lib"]
 
   defp deps do
     [

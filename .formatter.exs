@@ -1,6 +1,7 @@
 locals_without_parens = [
   absinthe_field_telemetry_dashboard: 1,
-  absinthe_field_telemetry_dashboard: 2
+  absinthe_field_telemetry_dashboard: 2,
+  test_backend: 1
 ]
 
 [
