@@ -13,7 +13,7 @@ defmodule AbsintheFieldTelemetry.Backend.TestSuite do
   """
   defmacro test_backend(implementation) do
     quote do
-      use ExUnit.Case, async: true
+      use ExUnit.Case
 
       alias unquote(implementation), as: Backend
       alias AbsintheFieldTelemetry.Test.Support.Schema

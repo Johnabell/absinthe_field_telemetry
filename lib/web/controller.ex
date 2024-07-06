@@ -42,6 +42,4 @@ defmodule AbsintheFieldTelemetry.Web.Controller do
   def refresh(conn, _params) do
     redirect(conn, to: Path.dirname(conn.request_path))
   end
-
-  def schema, do: Stonehenge.Public.Graphql.Schema
 end

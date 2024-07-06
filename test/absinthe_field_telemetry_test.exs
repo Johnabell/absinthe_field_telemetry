@@ -5,6 +5,13 @@ defmodule AbsintheFieldTelemetryTest do
 
   alias AbsintheFieldTelemetry.Test.Support.Schema
 
+  test "setup calls the backend setup" do
+    with_mock AbsintheFieldTelemetry.Backend, setup: fn -> :ok end do
+      assert :ok = AbsintheFieldTelemetry.setup()
+      assert_called(AbsintheFieldTelemetry.Backend.setup())
+    end
+  end
+
   test "when there is no data returns empty root node" do
     with_mock AbsintheFieldTelemetry.Backend, get_all_hits: fn Schema -> [] end do
       assert AbsintheFieldTelemetry.get_all(Schema) == AbsintheFieldTelemetry.Types.Node.root()
