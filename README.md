@@ -15,12 +15,6 @@ def deps do
 end
 ```
 
-Add a call to the setup function in your application setup
-
-```elixir
-AbsintheFieldTelemetry.setup()
-```
-
 Add `AbsintheFieldTelemetry.Middleware` to all the fields on the schema. The
 easiest way to achieve this is using the [`middleware/3` callback](https://hexdocs.pm/absinthe/Absinthe.Middleware.html#module-the-middleware-3-callback):
 

@@ -38,30 +38,15 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   ## Public API
 
   @spec start :: :ignore | {:error, any} | {:ok, pid}
-  def start, do: start([])
-
   @spec start(keyword()) :: :ignore | {:error, any} | {:ok, pid}
-  def start(args), do: GenServer.start(__MODULE__, args, name: __MODULE__)
+  def start(args \\ []), do: GenServer.start(__MODULE__, args, name: __MODULE__)
 
   @spec start_link :: :ignore | {:error, any} | {:ok, pid}
-  def start_link, do: start_link([])
-
   @spec start_link(keyword()) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(args), do: GenServer.start_link(__MODULE__, args, name: __MODULE__)
+  def start_link(args \\ []), do: GenServer.start_link(__MODULE__, args, name: __MODULE__)
 
   @spec stop :: any
   def stop, do: GenServer.call(__MODULE__, :stop)
-
-  @config Application.compile_env(:absinthe_field_telemetry, [:redis, :config],
-            expiry_ms: 60_000 * 60 * 4,
-            redis_url: "redis://localhost:6379/1"
-          )
-
-  @impl AbsintheFieldTelemetry.Backend
-  def setup() do
-    start_link(@config)
-    :ok
-  end
 
   @impl AbsintheFieldTelemetry.Backend
   def record_path_hits(schema, paths),
@@ -84,18 +69,21 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   @impl GenServer
   def init(args) do
-    expiry_ms = Keyword.get(args, :expiry_ms)
+    expiry_ms = get_config!(args, :expiry_ms)
     key_prefix = Keyword.get(args, :key_prefix, "AbsintheFieldTelemetry:Redis:")
     redix_config = Keyword.get(args, :redix_config, Keyword.get(args, :redis_config, []))
     redis_url = Keyword.get(args, :redis_url, nil)
 
-    if !expiry_ms do
-      raise RuntimeError, "Missing required config: expiry_ms"
-    end
-
     {:ok, redix} = start_redix(redis_url, redix_config)
 
     {:ok, %__MODULE__{redix: redix, expiry_ms: expiry_ms, key_prefix: key_prefix}}
+  end
+
+  defp get_config!(args, key) do
+    case Keyword.get(args, key) do
+      nil -> raise "Missing configuration #{key} must be provided as part of the config"
+      value -> value
+    end
   end
 
   defp start_redix(url, config) when is_non_empty_string(url), do: Redix.start_link(url, config)

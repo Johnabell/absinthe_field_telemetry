@@ -1,8 +1,14 @@
 defmodule AbsintheFieldTelemetry.Backend.BatchTest do
+  use ExUnit.Case
   import AbsintheFieldTelemetry.Backend.TestSuite
   import Mock
 
-  @threshold Application.compile_env(:absinthe_field_telemetry, [:batch, :threshold], 1000)
+  @threshold 1000
+
+  setup do
+    start_link()
+    :ok
+  end
 
   test_backend AbsintheFieldTelemetry.Backend.Batch
 
@@ -64,5 +70,36 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
         assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_), 1)
       end
     end
+  end
+
+  describe "stop" do
+    test "records all cashed hits on stop" do
+      with_mock AbsintheFieldTelemetry.Backend.Ets,
+        record_field_hits: fn _, _ -> :ok end,
+        stop: fn -> :ok end,
+        record_path_hits: fn _, _ -> :ok end do
+        Enum.each(2..@threshold, fn _ ->
+          Backend.record_field_hits(Schema, [{:query, :user}])
+          Backend.record_path_hits(Schema, [["user"]])
+        end)
+
+        refute called(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_))
+        refute called(AbsintheFieldTelemetry.Backend.Ets.record_path_hits(Schema, :_))
+
+        assert :ok = Backend.stop()
+
+        assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_), 1)
+        assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_path_hits(Schema, :_), 1)
+      end
+
+      start_link()
+    end
+  end
+
+  defp start_link() do
+    AbsintheFieldTelemetry.Backend.Batch.start_link(
+      backend: {AbsintheFieldTelemetry.Backend.Ets, []},
+      threshold: @threshold
+    )
   end
 end
