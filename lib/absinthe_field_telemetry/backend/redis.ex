@@ -111,16 +111,11 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
     do: {:reply, do_get_hits(state, schema, :field), state}
 
   @impl GenServer
-  def handle_cast({:incr_paths, {schema, paths}}, state) do
-    do_incr(state, schema, paths, :path)
-    {:noreply, state}
-  end
+  def handle_cast({:incr_paths, {schema, paths}}, state), do: do_incr(state, schema, paths, :path)
 
   @impl GenServer
-  def handle_cast({:incr_fields, {schema, fields}}, state) do
-    do_incr(state, schema, fields, :field)
-    {:noreply, state}
-  end
+  def handle_cast({:incr_fields, {schema, fields}}, state),
+    do: do_incr(state, schema, fields, :field)
 
   def handle_cast({:delete, schema}, state) do
     commands = Enum.map([:field, :path], &delete_command(state, schema, &1))
@@ -132,6 +127,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   defp do_incr(%__MODULE__{} = state, schema, values, type) do
     commands = Enum.map(values, &incr_command(state, schema, &1, type))
     Redix.noreply_pipeline(state.redix, [expire_command(state, schema, type) | commands])
+    {:noreply, state}
   end
 
   defp do_get_hits(%__MODULE__{redix: redix} = state, schema, type) do
