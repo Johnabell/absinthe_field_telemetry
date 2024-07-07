@@ -7,7 +7,7 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     in memory and then report them in batches of size `threshold` the other
     backend.
     
-    This is disigned to improve performance and throughput when a backend 
+    This is designed to improve performance and throughput when a backend
     requires a network call.
   """
   import TypedStruct
@@ -22,21 +22,19 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   end
 
   @behaviour Backend
-  @behaviour GenServer
 
-  @backend Application.compile_env(
-             :absinthe_field_telemetry,
-             [:batch, :backend],
-             AbsintheFieldTelemetry.Backend.Ets
-           )
+  use GenServer
 
-  @threshold Application.compile_env(:absinthe_field_telemetry, [:batch, :threshold], 1000)
+  @spec start :: :ignore | {:error, any} | {:ok, pid}
+  @spec start(keyword()) :: :ignore | {:error, any} | {:ok, pid}
+  def start(args \\ []), do: GenServer.start(__MODULE__, args, name: __MODULE__)
 
-  @impl Backend
-  def setup() do
-    GenServer.start_link(__MODULE__, [threshold: @threshold, backend: @backend], name: __MODULE__)
-    @backend.setup()
-  end
+  @spec start_link :: :ignore | {:error, any} | {:ok, pid}
+  @spec start_link(keyword()) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(args \\ []), do: GenServer.start_link(__MODULE__, args, name: __MODULE__)
+
+  @spec stop :: any
+  def stop, do: GenServer.call(__MODULE__, :stop)
 
   @impl AbsintheFieldTelemetry.Backend
   def record_path_hits(schema, paths),
@@ -57,9 +55,17 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
 
   @impl GenServer
   def init(args) do
-    threshold = Keyword.get(args, :threshold)
-    backend = Keyword.get(args, :backend)
+    threshold = get_config!(args, :threshold)
+    {backend, args} = get_config!(args, :backend)
+    backend.start_link(args)
     {:ok, %__MODULE__{threshold: threshold, backend: backend}}
+  end
+
+  def get_config!(args, key) do
+    case Keyword.get(args, key) do
+      nil -> raise "Missing configuration #{key} must be provided as part of the config"
+      value -> value
+    end
   end
 
   @impl GenServer
@@ -70,7 +76,7 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     do: do_incr(state, :field_cache, schema, fields)
 
   def handle_cast({:reset, schema}, state) do
-    @backend.reset(schema)
+    state.backend.reset(schema)
 
     state
     |> reset(:path_cache, schema)
@@ -81,6 +87,12 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   @impl GenServer
   def handle_call({:path_hits, schema}, _, state), do: do_get_hits(state, :path_cache, schema)
   def handle_call({:field_hits, schema}, _, state), do: do_get_hits(state, :field_cache, schema)
+
+  def handle_call(:stop, _from, state) do
+    send_all(state)
+    state.backend.stop()
+    {:stop, :normal, :ok, %__MODULE__{state | field_cache: %{}, path_cache: %{}}}
+  end
 
   defp do_get_hits(%__MODULE__{} = state, cache, schema) do
     state.backend
@@ -110,11 +122,23 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
 
   defp maybe_send_batch(%__MODULE__{threshold: threshold} = state, cache, schema, batch)
        when length(batch) >= threshold do
-    Kernel.apply(state.backend, record_hit_function(cache), [schema, batch])
+    send_batch(state, cache, schema, batch)
     reset(state, cache, schema)
   end
 
   defp maybe_send_batch(%__MODULE__{} = state, _, _, _), do: state
+
+  defp send_batch(%__MODULE__{} = state, cache, schema, batch),
+    do: Kernel.apply(state.backend, record_hit_function(cache), [schema, batch])
+
+  defp send_all(%__MODULE__{} = state),
+    do: Enum.each([:path_cache, :field_cache], &send_all(state, &1))
+
+  defp send_all(%__MODULE__{} = state, cache) do
+    state
+    |> Map.get(cache)
+    |> Enum.each(fn {schema, batch} -> send_batch(state, cache, schema, batch) end)
+  end
 
   defp record_hit_function(:path_cache), do: :record_path_hits
   defp record_hit_function(:field_cache), do: :record_field_hits

@@ -19,7 +19,6 @@ defmodule AbsintheFieldTelemetry.Backend.TestSuite do
       alias AbsintheFieldTelemetry.Test.Support.Schema
 
       setup do
-        Backend.setup()
         Backend.reset(Schema)
       end
 

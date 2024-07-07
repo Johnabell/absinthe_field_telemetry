@@ -22,6 +22,7 @@ defmodule AbsintheFieldTelemetry.MixProject do
 
   def application do
     [
+      mod: {AbsintheFieldTelemetry.Application, []},
       extra_applications: [:logger]
     ]
   end

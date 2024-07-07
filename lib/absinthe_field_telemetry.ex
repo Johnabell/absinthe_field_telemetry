@@ -39,8 +39,6 @@ defmodule AbsintheFieldTelemetry do
   alias AbsintheFieldTelemetry.Backend
   alias AbsintheFieldTelemetry.Types
 
-  def setup(), do: Backend.setup()
-
   def get_path_hits(schema) do
     schema
     |> Backend.get_all_path_hits()

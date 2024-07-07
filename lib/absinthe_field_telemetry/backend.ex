@@ -14,20 +14,16 @@ defmodule AbsintheFieldTelemetry.Backend do
   @type field :: {type_identifier, field_identifier}
   @type field_hits :: [{field, integer}]
 
-  @implementation Application.compile_env(
-                    :absinthe_field_telemetry,
-                    [:backend],
-                    AbsintheFieldTelemetry.Backend.Ets
-                  )
+  @implementation :absinthe_field_telemetry
+                  |> Application.compile_env([:backend], {AbsintheFieldTelemetry.Backend.Ets, []})
+                  |> elem(0)
 
-  @callback setup() :: :ok
   @callback record_path_hits(schema, [path]) :: :ok
   @callback record_field_hits(schema, [field]) :: :ok
   @callback get_all_path_hits(schema) :: path_hits
   @callback get_all_field_hits(schema) :: field_hits
   @callback reset(schema) :: :ok
 
-  defdelegate setup, to: @implementation
   defdelegate record_path_hits(schema, paths), to: @implementation
   defdelegate record_field_hits(schema, fields), to: @implementation
   defdelegate get_all_path_hits(schema), to: @implementation

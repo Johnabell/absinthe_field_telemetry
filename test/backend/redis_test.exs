@@ -1,5 +1,13 @@
 defmodule AbsintheFieldTelemetry.Backend.RedisTest do
+  use ExUnit.Case
   import AbsintheFieldTelemetry.Backend.TestSuite
+
+  @default_redis_url "redis://localhost:6379/1"
+
+  setup do
+    start_link()
+    :ok
+  end
 
   test_backend AbsintheFieldTelemetry.Backend.Redis
 
@@ -7,10 +15,7 @@ defmodule AbsintheFieldTelemetry.Backend.RedisTest do
     # Disconnect and Set bad connection string
     Backend.stop()
 
-    Backend.start(
-      expiry_ms: 60_000 * 60 * 4,
-      redix_config: "redis://doesnotexist:5000"
-    )
+    start_link(redix_config: "redis://doesnotexist:5000")
 
     # Attempt to record hits
     assert :ok == Backend.record_path_hits(Schema, [["user"]])
@@ -21,6 +26,12 @@ defmodule AbsintheFieldTelemetry.Backend.RedisTest do
 
     # Restore connection
     Backend.stop()
-    Backend.setup()
+    start_link()
+  end
+
+  defp start_link(config \\ [redis_url: @default_redis_url]) do
+    [expiry_ms: 60_000 * 60 * 4]
+    |> Keyword.merge(config)
+    |> AbsintheFieldTelemetry.Backend.Redis.start_link()
   end
 end
