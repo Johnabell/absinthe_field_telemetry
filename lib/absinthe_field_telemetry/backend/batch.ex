@@ -159,6 +159,8 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
 
   defp maybe_send_batch(%__MODULE__{} = state, _, _, _), do: state
 
+  defp send_batch(%__MODULE__{}, _, _, []), do: :ok
+
   defp send_batch(%__MODULE__{} = state, cache, schema, batch),
     do: Kernel.apply(state.backend, record_hit_function(cache), [schema, batch])
 
