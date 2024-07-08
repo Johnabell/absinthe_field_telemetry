@@ -4,6 +4,7 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
   import Mock
 
   @threshold 1000
+  @interval_ms 100
 
   setup do
     start_link()
@@ -17,9 +18,7 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
       with_mock AbsintheFieldTelemetry.Backend.Ets,
         record_path_hits: fn _, _ -> :ok end,
         get_all_path_hits: fn _ -> [] end do
-        Enum.each(2..@threshold, fn _ ->
-          Backend.record_path_hits(Schema, [["user"]])
-        end)
+        Enum.each(2..@threshold, fn _ -> Backend.record_path_hits(Schema, [["user"]]) end)
 
         assert [{["user"], 999}] = Backend.get_all_path_hits(Schema)
 
@@ -31,9 +30,7 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
       with_mock AbsintheFieldTelemetry.Backend.Ets,
         record_path_hits: fn _, _ -> :ok end,
         get_all_path_hits: fn _ -> [{["user"], 1000}] end do
-        Enum.each(0..@threshold, fn _ ->
-          Backend.record_path_hits(Schema, [["user"]])
-        end)
+        Enum.each(0..@threshold, fn _ -> Backend.record_path_hits(Schema, [["user"]]) end)
 
         assert [{["user"], 1001}] = Backend.get_all_path_hits(Schema)
 
@@ -47,9 +44,7 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
       with_mock AbsintheFieldTelemetry.Backend.Ets,
         record_field_hits: fn _, _ -> :ok end,
         get_all_field_hits: fn _ -> [] end do
-        Enum.each(2..@threshold, fn _ ->
-          Backend.record_field_hits(Schema, [{:query, :user}])
-        end)
+        Enum.each(2..@threshold, fn _ -> Backend.record_field_hits(Schema, [{:query, :user}]) end)
 
         assert [{{:query, :user}, 999}] = Backend.get_all_field_hits(Schema)
 
@@ -61,12 +56,36 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
       with_mock AbsintheFieldTelemetry.Backend.Ets,
         record_field_hits: fn _, _ -> :ok end,
         get_all_field_hits: fn _ -> [{{:query, :user}, 1000}] end do
-        Enum.each(0..@threshold, fn _ ->
-          Backend.record_field_hits(Schema, [{:query, :user}])
-        end)
+        Enum.each(0..@threshold, fn _ -> Backend.record_field_hits(Schema, [{:query, :user}]) end)
 
         assert [{{:query, :user}, 1001}] = Backend.get_all_field_hits(Schema)
 
+        assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_), 1)
+      end
+    end
+  end
+
+  describe "interval" do
+    test "does not call backend when called less than batch size" do
+      with_mock AbsintheFieldTelemetry.Backend.Ets,
+        record_field_hits: fn _, _ -> :ok end,
+        record_path_hits: fn _, _ -> :ok end,
+        get_all_field_hits: fn _ -> [] end,
+        get_all_path_hits: fn _ -> [] end do
+        Enum.each(2..@threshold, fn _ ->
+          Backend.record_field_hits(Schema, [{:query, :user}])
+          Backend.record_path_hits(Schema, [["user"]])
+        end)
+
+        assert [{["user"], 999}] = Backend.get_all_path_hits(Schema)
+        assert [{{:query, :user}, 999}] = Backend.get_all_field_hits(Schema)
+
+        refute called(AbsintheFieldTelemetry.Backend.Ets.record_path_hits(Schema, :_))
+        refute called(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_))
+
+        :timer.sleep(@interval_ms + 10)
+
+        assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_path_hits(Schema, :_), 1)
         assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_), 1)
       end
     end
@@ -99,7 +118,8 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
   defp start_link() do
     AbsintheFieldTelemetry.Backend.Batch.start_link(
       backend: {AbsintheFieldTelemetry.Backend.Ets, []},
-      threshold: @threshold
+      threshold: @threshold,
+      interval_ms: @interval_ms
     )
   end
 end
