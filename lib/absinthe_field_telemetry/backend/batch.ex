@@ -9,6 +9,21 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     
     This is designed to improve performance and throughput when a backend
     requires a network call.
+
+    The backend process is started by calling `start_link`:
+
+        AbsintheFieldTelemetry.Backend.Batch.start_link(
+          threshold: 10_000,
+          interval_ms: 60_000 * 10,
+          backend: {AbsintheFieldTelemetry.Backend.Ets, []}
+        )
+
+    Options are:
+
+    - `interval_ms`: If set, this backend will report all unreported cached hits
+      every `interval_ms`.
+    - `threshold`: The number of hits to cash before reporting the backend (required)
+    - `backend`: The persistence backend (required)
   """
   import TypedStruct
 
@@ -56,10 +71,19 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   @impl GenServer
   def init(args) do
     threshold = get_config!(args, :threshold)
+
+    args
+    |> Keyword.get(:interval_ms)
+    |> schedule_interval()
+
     {backend, args} = get_config!(args, :backend)
     backend.start_link(args)
+
     {:ok, %__MODULE__{threshold: threshold, backend: backend}}
   end
+
+  defp schedule_interval(nil), do: :ok
+  defp schedule_interval(interval), do: :timer.send_interval(interval, :send_all)
 
   def get_config!(args, key) do
     case Keyword.get(args, key) do
@@ -85,13 +109,20 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   end
 
   @impl GenServer
+  def handle_info(:send_all, state) do
+    state
+    |> send_all()
+    |> noreply()
+  end
+
+  @impl GenServer
   def handle_call({:path_hits, schema}, _, state), do: do_get_hits(state, :path_cache, schema)
   def handle_call({:field_hits, schema}, _, state), do: do_get_hits(state, :field_cache, schema)
 
   def handle_call(:stop, _from, state) do
-    send_all(state)
+    state = send_all(state)
     state.backend.stop()
-    {:stop, :normal, :ok, %__MODULE__{state | field_cache: %{}, path_cache: %{}}}
+    {:stop, :normal, :ok, state}
   end
 
   defp do_get_hits(%__MODULE__{} = state, cache, schema) do
@@ -131,8 +162,10 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   defp send_batch(%__MODULE__{} = state, cache, schema, batch),
     do: Kernel.apply(state.backend, record_hit_function(cache), [schema, batch])
 
-  defp send_all(%__MODULE__{} = state),
-    do: Enum.each([:path_cache, :field_cache], &send_all(state, &1))
+  defp send_all(%__MODULE__{} = state) do
+    Enum.each([:path_cache, :field_cache], &send_all(state, &1))
+    %__MODULE__{state | field_cache: %{}, path_cache: %{}}
+  end
 
   defp send_all(%__MODULE__{} = state, cache) do
     state
