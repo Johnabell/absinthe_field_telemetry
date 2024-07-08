@@ -1,3 +1,8 @@
+[![Elixir CI](https://github.com/Johnabell/absinthe_field_telemetry/actions/workflows/elixir.yml/badge.svg)](https://github.com/Johnabell/absinthe_field_telemetry/actions/workflows/elixir.yml)
+[![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/absinthe_field_telemetry)
+[![Hex.pm](https://img.shields.io/hexpm/v/absinthe_field_telemetry.svg)](https://hex.pm/packages/absinthe_field_telemetry)
+[![License](https://img.shields.io/hexpm/l/absinthe_field_telemetry.svg)](https://github.com/Johnabell/absinthe_field_telemetry/blob/master/LICENSE)
+
 # AbsintheFieldTelemetry
 
 A library for analysing absinthe GraphQL runtime usage.
