@@ -49,10 +49,14 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   def stop, do: GenServer.call(__MODULE__, :stop)
 
   @impl AbsintheFieldTelemetry.Backend
+  def record_path_hits(_, []), do: :ok
+
   def record_path_hits(schema, paths),
     do: GenServer.cast(__MODULE__, {:incr_paths, {schema, paths}})
 
   @impl AbsintheFieldTelemetry.Backend
+  def record_field_hits(_, []), do: :ok
+
   def record_field_hits(schema, fields),
     do: GenServer.cast(__MODULE__, {:incr_fields, {schema, fields}})
 
