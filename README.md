@@ -10,7 +10,7 @@ of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:absinthe_field_telemetry, "~> 0.2.1"}
+    {:absinthe_field_telemetry, "~> 0.2.2"}
   ]
 end
 ```

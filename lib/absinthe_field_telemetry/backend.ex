@@ -14,19 +14,22 @@ defmodule AbsintheFieldTelemetry.Backend do
   @type field :: {type_identifier, field_identifier}
   @type field_hits :: [{field, integer}]
 
-  @implementation :absinthe_field_telemetry
-                  |> Application.compile_env([:backend], {AbsintheFieldTelemetry.Backend.Ets, []})
-                  |> elem(0)
-
   @callback record_path_hits(schema, [path]) :: :ok
   @callback record_field_hits(schema, [field]) :: :ok
   @callback get_all_path_hits(schema) :: path_hits
   @callback get_all_field_hits(schema) :: field_hits
   @callback reset(schema) :: :ok
 
-  defdelegate record_path_hits(schema, paths), to: @implementation
-  defdelegate record_field_hits(schema, fields), to: @implementation
-  defdelegate get_all_path_hits(schema), to: @implementation
-  defdelegate get_all_field_hits(schema), to: @implementation
-  defdelegate reset(schema), to: @implementation
+  def record_path_hits(schema, paths), do: backend().record_path_hits(schema, paths)
+  def record_field_hits(schema, fields), do: backend().record_field_hits(schema, fields)
+  def get_all_path_hits(schema), do: backend().get_all_path_hits(schema)
+  def get_all_field_hits(schema), do: backend().get_all_field_hits(schema)
+  def reset(schema), do: backend().reset(schema)
+
+  @spec backend() :: t()
+  defp backend() do
+    :absinthe_field_telemetry
+    |> Application.get_env(:backend, {AbsintheFieldTelemetry.Backend.Ets, []})
+    |> elem(0)
+  end
 end
