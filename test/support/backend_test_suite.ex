@@ -38,7 +38,7 @@ defmodule AbsintheFieldTelemetry.Backend.TestSuite do
         {:user, :id}
       ]
 
-      describe "record_path_hit/2" do
+      describe "record_path_hits/2" do
         test "no paths field" do
           assert :ok == Backend.record_path_hits(Schema, [])
           assert [] == Backend.get_all_path_hits(Schema)
@@ -58,10 +58,10 @@ defmodule AbsintheFieldTelemetry.Backend.TestSuite do
         end
       end
 
-      describe "record_field_hit/3" do
+      describe "record_field_hits/2" do
         test "no paths field" do
           assert :ok == Backend.record_field_hits(Schema, [])
-          assert [] == Backend.get_all_path_hits(Schema)
+          assert [] == Backend.get_all_field_hits(Schema)
         end
 
         test "record_field_hit/3" do
