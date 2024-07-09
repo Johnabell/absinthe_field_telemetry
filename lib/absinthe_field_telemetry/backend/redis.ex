@@ -15,6 +15,9 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
 
   - `expiry_ms`: Expiry time of buckets in milliseconds,
     used to set TTL on Redis keys. This configuration is mandatory.
+  - `support_client_commands`: If the server does not support client commands
+    it not possible to use noreply type commands and this value should be set
+    to `false`. Default: `true`.
   - `redix_config`: Keyword list of options to the `Redix` redis client,
     also aliased to `redis_config`
   - `key_prefix`: The prefix to use for all the redis keys (defaults to "AbsintheFieldTelemetry:Redis:")
@@ -27,6 +30,7 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
     field :redix, pid()
     field :expiry_ms, integer()
     field :key_prefix, String.t()
+    field :support_client_commands, boolean()
   end
 
   @behaviour AbsintheFieldTelemetry.Backend
@@ -75,12 +79,19 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   def init(args) do
     expiry_ms = get_config!(args, :expiry_ms)
     key_prefix = Keyword.get(args, :key_prefix, "AbsintheFieldTelemetry:Redis:")
+    support_client_commands = Keyword.get(args, :support_client_commands, true)
     redix_config = Keyword.get(args, :redix_config, Keyword.get(args, :redis_config, []))
     redis_url = Keyword.get(args, :redis_url, nil)
 
     {:ok, redix} = start_redix(redis_url, redix_config)
 
-    {:ok, %__MODULE__{redix: redix, expiry_ms: expiry_ms, key_prefix: key_prefix}}
+    {:ok,
+     %__MODULE__{
+       redix: redix,
+       expiry_ms: expiry_ms,
+       key_prefix: key_prefix,
+       support_client_commands: support_client_commands
+     }}
   end
 
   defp get_config!(args, key) do
@@ -110,17 +121,24 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
     do: do_incr(state, schema, fields, :field)
 
   def handle_cast({:delete, schema}, state) do
-    commands = Enum.map([:field, :path], &delete_command(state, schema, &1))
-    Redix.noreply_pipeline(state.redix, commands)
+    [:field, :path]
+    |> Enum.map(&delete_command(state, schema, &1))
+    |> send_pipeline(state)
 
     {:noreply, state}
   end
 
   defp do_incr(%__MODULE__{} = state, schema, values, type) do
-    commands = Enum.map(values, &incr_command(state, schema, &1, type))
-    Redix.noreply_pipeline(state.redix, [expire_command(state, schema, type) | commands])
+    values
+    |> Enum.map(&incr_command(state, schema, &1, type))
+    |> with_expire_command(state, schema, type)
+    |> send_pipeline(state)
+
     {:noreply, state}
   end
+
+  def with_expire_command(commands, state, schema, type),
+    do: [expire_command(state, schema, type) | commands]
 
   defp do_get_hits(%__MODULE__{redix: redix} = state, schema, type) do
     redix
@@ -144,6 +162,11 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
     |> Enum.map(&String.to_atom/1)
     |> List.to_tuple()
   end
+
+  defp send_pipeline(commands, %__MODULE__{support_client_commands: true, redix: redix}),
+    do: Redix.noreply_pipeline(redix, commands)
+
+  defp send_pipeline(commands, %__MODULE__{redix: redix}), do: Redix.pipeline(redix, commands)
 
   defp incr_command(%__MODULE__{} = state, schema, value, type),
     do: ["HINCRBY", redis_key(state, schema, type), field_key(value), 1]

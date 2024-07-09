@@ -87,12 +87,17 @@ defmodule AbsintheFieldTelemetry.Backend.BatchTest do
 
         assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_path_hits(Schema, :_), 1)
         assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_), 1)
+
+        :timer.sleep(@interval_ms + 10)
+
+        assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_path_hits(Schema, :_), 1)
+        assert_called_exactly(AbsintheFieldTelemetry.Backend.Ets.record_field_hits(Schema, :_), 1)
       end
     end
   end
 
   describe "stop" do
-    test "records all cashed hits on stop" do
+    test "records all cached hits on stop" do
       with_mock AbsintheFieldTelemetry.Backend.Ets,
         record_field_hits: fn _, _ -> :ok end,
         stop: fn -> :ok end,
