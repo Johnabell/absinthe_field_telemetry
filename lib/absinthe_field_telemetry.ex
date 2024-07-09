@@ -10,7 +10,7 @@ defmodule AbsintheFieldTelemetry do
     ```elixir
     def deps do
     [
-      {:absinthe_field_telemetry, "~> 0.2.4"}
+      {:absinthe_field_telemetry, "~> 0.2.5"}
     ]
     end
     ```
