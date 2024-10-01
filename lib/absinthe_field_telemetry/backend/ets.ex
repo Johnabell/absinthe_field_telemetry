@@ -28,13 +28,7 @@ defmodule AbsintheFieldTelemetry.Backend.Ets do
   def handle_call(:stop, _from, state), do: {:stop, :normal, :ok, state}
 
   @impl AbsintheFieldTelemetry.Backend
-  def record_path_hits(schema, paths), do: do_record_hits(schema, paths, :path)
-
-  @impl AbsintheFieldTelemetry.Backend
   def record_field_hits(schema, fields), do: do_record_hits(schema, fields, :field)
-
-  @impl AbsintheFieldTelemetry.Backend
-  def get_all_path_hits(schema), do: do_get_hits(schema, :path)
 
   @impl AbsintheFieldTelemetry.Backend
   def get_all_field_hits(schema), do: do_get_hits(schema, :field)

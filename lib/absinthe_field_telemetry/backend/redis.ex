@@ -53,19 +53,10 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   def stop, do: GenServer.call(__MODULE__, :stop)
 
   @impl AbsintheFieldTelemetry.Backend
-  def record_path_hits(_, []), do: :ok
-
-  def record_path_hits(schema, paths),
-    do: GenServer.cast(__MODULE__, {:incr_paths, {schema, paths}})
-
-  @impl AbsintheFieldTelemetry.Backend
   def record_field_hits(_, []), do: :ok
 
   def record_field_hits(schema, fields),
     do: GenServer.cast(__MODULE__, {:incr_fields, {schema, fields}})
-
-  @impl AbsintheFieldTelemetry.Backend
-  def get_all_path_hits(schema), do: GenServer.call(__MODULE__, {:path_hits, schema})
 
   @impl AbsintheFieldTelemetry.Backend
   def get_all_field_hits(schema), do: GenServer.call(__MODULE__, {:field_hits, schema})
@@ -107,21 +98,15 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   @impl GenServer
   def handle_call(:stop, _from, state), do: {:stop, :normal, :ok, state}
 
-  def handle_call({:path_hits, schema}, _from, state),
-    do: {:reply, do_get_hits(state, schema, :path), state}
-
   def handle_call({:field_hits, schema}, _from, state),
     do: {:reply, do_get_hits(state, schema, :field), state}
-
-  @impl GenServer
-  def handle_cast({:incr_paths, {schema, paths}}, state), do: do_incr(state, schema, paths, :path)
 
   @impl GenServer
   def handle_cast({:incr_fields, {schema, fields}}, state),
     do: do_incr(state, schema, fields, :field)
 
   def handle_cast({:delete, schema}, state) do
-    [:field, :path]
+    [:field]
     |> Enum.map(&delete_command(state, schema, &1))
     |> send_pipeline(state)
 
@@ -153,8 +138,6 @@ defmodule AbsintheFieldTelemetry.Backend.Redis do
   end
 
   defp redis_result_to_hits(_, _), do: []
-
-  defp hit_from_key(key, :path), do: String.split(key, ":")
 
   defp hit_from_key(key, :field) do
     key

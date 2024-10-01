@@ -16,15 +16,6 @@ defmodule AbsintheFieldTelemetry.Web.Controller do
     _ -> text(conn, @error)
   end
 
-  def tree(conn, params) do
-    %{root: AbsintheFieldTelemetry.get_path_hits(get_schema!(params))}
-    |> AbsintheFieldTelemetry.Web.Components.Home.tree()
-    |> Phoenix.HTML.Safe.to_iodata()
-    |> then(&html(conn, &1))
-  rescue
-    _ -> text(conn, @error)
-  end
-
   def reset(conn, params) do
     params
     |> get_schema!()

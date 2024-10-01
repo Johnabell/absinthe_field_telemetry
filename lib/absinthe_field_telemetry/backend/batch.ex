@@ -3,7 +3,7 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     This implementation of the backend is provided to be a wrapper around
     another backend.
 
-    The idea related to this backend is that it will cache field and path hits
+    The idea related to this backend is that it will cache field hits
     in memory and then report them in batches of size `threshold` the other
     backend.
     
@@ -31,7 +31,6 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
 
   typedstruct enforce: true do
     field :field_cache, %{required(atom) => list()}, default: %{}
-    field :path_cache, %{required(atom) => list()}, default: %{}
     field :threshold, integer()
     field :backend, AbsintheFieldTelemetry.Backend.t()
   end
@@ -52,15 +51,8 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   def stop, do: GenServer.call(__MODULE__, :stop)
 
   @impl AbsintheFieldTelemetry.Backend
-  def record_path_hits(schema, paths),
-    do: GenServer.cast(__MODULE__, {:incr_paths, {schema, paths}})
-
-  @impl AbsintheFieldTelemetry.Backend
   def record_field_hits(schema, fields),
     do: GenServer.cast(__MODULE__, {:incr_fields, {schema, fields}})
-
-  @impl AbsintheFieldTelemetry.Backend
-  def get_all_path_hits(schema), do: GenServer.call(__MODULE__, {:path_hits, schema})
 
   @impl AbsintheFieldTelemetry.Backend
   def get_all_field_hits(schema), do: GenServer.call(__MODULE__, {:field_hits, schema})
@@ -92,10 +84,6 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     end
   end
 
-  @impl GenServer
-  def handle_cast({:incr_paths, {schema, paths}}, state),
-    do: do_incr(state, :path_cache, schema, paths)
-
   def handle_cast({:incr_fields, {schema, fields}}, state),
     do: do_incr(state, :field_cache, schema, fields)
 
@@ -103,7 +91,6 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     state.backend.reset(schema)
 
     state
-    |> reset(:path_cache, schema)
     |> reset(:field_cache, schema)
     |> noreply()
   end
@@ -116,7 +103,6 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   end
 
   @impl GenServer
-  def handle_call({:path_hits, schema}, _, state), do: do_get_hits(state, :path_cache, schema)
   def handle_call({:field_hits, schema}, _, state), do: do_get_hits(state, :field_cache, schema)
 
   def handle_call(:stop, _from, state) do
@@ -148,7 +134,6 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
   defp maybe_send_batch(%__MODULE__{} = state, schema) do
     state
     |> maybe_send_batch(:field_cache, schema, state.field_cache[schema])
-    |> maybe_send_batch(:path_cache, schema, state.path_cache[schema])
   end
 
   defp maybe_send_batch(%__MODULE__{threshold: threshold} = state, cache, schema, batch)
@@ -165,8 +150,8 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     do: Kernel.apply(state.backend, record_hit_function(cache), [schema, batch])
 
   defp send_all(%__MODULE__{} = state) do
-    Enum.each([:path_cache, :field_cache], &send_all(state, &1))
-    %__MODULE__{state | field_cache: %{}, path_cache: %{}}
+    Enum.each([:field_cache], &send_all(state, &1))
+    %__MODULE__{state | field_cache: %{}}
   end
 
   defp send_all(%__MODULE__{} = state, cache) do
@@ -175,10 +160,8 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     |> Enum.each(fn {schema, batch} -> send_batch(state, cache, schema, batch) end)
   end
 
-  defp record_hit_function(:path_cache), do: :record_path_hits
   defp record_hit_function(:field_cache), do: :record_field_hits
 
-  defp get_all_hits_function(:path_cache), do: :get_all_path_hits
   defp get_all_hits_function(:field_cache), do: :get_all_field_hits
 
   defp get_cache(%__MODULE__{} = state, cache, schema) do

@@ -22,14 +22,6 @@ defmodule AbsintheFieldTelemetry.Backend.TestSuite do
         Backend.reset(Schema)
       end
 
-      @path_hits [
-        ["user"],
-        ["user", "id"],
-        ["user", "name"],
-        ["user"],
-        ["user", "id"]
-      ]
-
       @type_hits [
         {:user, :id},
         {:query, :user},
@@ -38,28 +30,8 @@ defmodule AbsintheFieldTelemetry.Backend.TestSuite do
         {:user, :id}
       ]
 
-      describe "record_path_hits/2" do
-        test "no paths field" do
-          assert :ok == Backend.record_path_hits(Schema, [])
-          assert [] == Backend.get_all_path_hits(Schema)
-        end
-
-        test "record_field_hit/2" do
-          assert :ok == Backend.record_path_hits(Schema, @path_hits)
-
-          assert [
-                   {["user"], 2},
-                   {["user", "id"], 2},
-                   {["user", "name"], 1}
-                 ] == Schema |> Backend.get_all_path_hits() |> Enum.sort()
-
-          assert :ok == Backend.reset(Schema)
-          assert [] == Backend.get_all_path_hits(Schema)
-        end
-      end
-
       describe "record_field_hits/2" do
-        test "no paths field" do
+        test "no field field" do
           assert :ok == Backend.record_field_hits(Schema, [])
           assert [] == Backend.get_all_field_hits(Schema)
         end

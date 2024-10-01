@@ -5,15 +5,6 @@ defmodule AbsintheFieldTelemetryTest do
 
   alias AbsintheFieldTelemetry.Test.Support.Schema
 
-  test "when there is no data returns empty root node" do
-    with_mock AbsintheFieldTelemetry.Backend, get_all_path_hits: fn Schema -> [] end do
-      assert AbsintheFieldTelemetry.get_path_hits(Schema) ==
-               AbsintheFieldTelemetry.Types.Node.root()
-
-      assert_called(AbsintheFieldTelemetry.Backend.get_all_path_hits(Schema))
-    end
-  end
-
   test "when there is no data all types with zero count" do
     with_mock AbsintheFieldTelemetry.Backend, get_all_field_hits: fn Schema -> [] end do
       Schema
