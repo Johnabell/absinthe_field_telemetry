@@ -99,17 +99,4 @@ defmodule AbsintheFieldTelemetry.Web.Components.Home do
     <% end %>
     """
   end
-
-  attr :root, :map
-  attr :styles, :string, default: @styles
-
-  def tree(assigns) do
-    ~H"""
-    <title>Tree view</title>
-    <style>
-      <%= @styles %>
-    </style>
-    <Components.Node.object field={@root} />
-    """
-  end
 end

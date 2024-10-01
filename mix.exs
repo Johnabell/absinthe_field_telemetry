@@ -1,7 +1,7 @@
 defmodule AbsintheFieldTelemetry.MixProject do
   use Mix.Project
 
-  @version "0.2.5"
+  @version "0.3.0"
   @description """
   A library for analysing absinthe GraphQL runtime usage.
   """

@@ -39,13 +39,6 @@ defmodule AbsintheFieldTelemetry do
   alias AbsintheFieldTelemetry.Backend
   alias AbsintheFieldTelemetry.Types
 
-  def get_path_hits(schema) do
-    schema
-    |> Backend.get_all_path_hits()
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Enum.reduce(Types.Node.root(), &Types.Node.add_field(&2, &1))
-  end
-
   def get_field_hits(schema) do
     hits =
       schema

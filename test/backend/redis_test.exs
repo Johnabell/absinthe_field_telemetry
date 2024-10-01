@@ -18,10 +18,8 @@ defmodule AbsintheFieldTelemetry.Backend.RedisTest do
     start_link(redix_config: "redis://doesnotexist:5000")
 
     # Attempt to record hits
-    assert :ok == Backend.record_path_hits(Schema, [["user"]])
     assert :ok == Backend.record_field_hits(Schema, [{:user, :id}])
     # Query hits should return empty lists
-    assert [] = Backend.get_all_path_hits(Schema)
     assert [] = Backend.get_all_field_hits(Schema)
 
     # Restore connection
