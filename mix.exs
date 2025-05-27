@@ -37,7 +37,7 @@ defmodule AbsintheFieldTelemetry.MixProject do
       {:ex_doc, "~> 0.28", only: :dev},
       {:mock, "~> 0.3", only: :test},
       {:phoenix, "~> 1.7"},
-      {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_view, "~> 1.0"},
       {:floki, ">= 0.30.0", only: :test},
       {:redix, "~> 1.1"},
       {:absinthe, "~> 1.5"},
