@@ -84,6 +84,7 @@ defmodule AbsintheFieldTelemetry.Backend.Batch do
     end
   end
 
+  @impl GenServer
   def handle_cast({:incr_fields, {schema, fields}}, state),
     do: do_incr(state, :field_cache, schema, fields)
 

@@ -33,3 +33,23 @@ defmodule AbsintheFieldTelemetry.Backend.RedisTest do
     |> AbsintheFieldTelemetry.Backend.Redis.start_link()
   end
 end
+
+defmodule AbsintheFieldTelemetry.Backend.RedisTest.NoClientCommands do
+  use ExUnit.Case
+  import AbsintheFieldTelemetry.Backend.TestSuite
+
+  @default_redis_url "redis://localhost:6379/1"
+
+  setup do
+    start_link()
+    :ok
+  end
+
+  test_backend AbsintheFieldTelemetry.Backend.Redis
+
+  defp start_link(config \\ [redis_url: @default_redis_url]) do
+    [expiry_ms: 60_000 * 60 * 4, support_client_commands: false]
+    |> Keyword.merge(config)
+    |> AbsintheFieldTelemetry.Backend.Redis.start_link()
+  end
+end
