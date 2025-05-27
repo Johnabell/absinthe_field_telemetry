@@ -46,7 +46,8 @@ defmodule AbsintheFieldTelemetry.Types.Object do
 
   def color(%__MODULE__{} = object) do
     case percentage_hit(object) do
-      0.0 -> :red
+      +0.0 -> :red
+      -0.0 -> :red
       1.0 -> :green
       _ -> :orange
     end
