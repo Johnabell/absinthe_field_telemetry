@@ -16,8 +16,8 @@ defmodule AbsintheFieldTelemetry.Web.Components.Object do
         <summary>
           <a id={@object.identifier}>
             <div style="display: inline-flex; justify-content: space-between; width: calc(100% - 1.37em);">
-              <span><%= @object |> Object.color() |> color() %> <%= @object.name %></span>
-              <span><%= (Object.percentage_hit(@object) * 100) |> Float.round(0) %>%</span>
+              <span>{@object |> Object.color() |> color()} {@object.name}</span>
+              <span>{(Object.percentage_hit(@object) * 100) |> Float.round(0)}%</span>
             </div>
           </a>
           <.file_reference location={@object.location} />
@@ -37,7 +37,7 @@ defmodule AbsintheFieldTelemetry.Web.Components.Object do
   def field(assigns) do
     ~H"""
     <a href={"##{@field.type}"}>
-      <%= @field |> Field.color() |> color() %> <%= @field.name %> (hit count: <%= @field.count %>)
+      {@field |> Field.color() |> color()} {@field.name} (hit count: {@field.count})
     </a>
     <.file_reference location={@field.location} />
     """
@@ -48,7 +48,7 @@ defmodule AbsintheFieldTelemetry.Web.Components.Object do
   def file_reference(assigns) do
     ~H"""
     <div style="color: grey; font-size: 0.8rem;">
-      <%= @location.file %>:<%= @location.line %>
+      {@location.file}:{@location.line}
     </div>
     """
   end
